@@ -66,16 +66,31 @@ public class RCTCamera {
         if(camera == null) {
             return null;
         }
+
+        Camera.Size pictureSize = getBestPictureSize(type, width, height);
+        float pictureAspect = (float) pictureSize.width / (float) pictureSize.height;
+
         Camera.Parameters params = camera.getParameters();
+        // We want to find a preview size that is both as big as possible while still having the same (or very similar) aspect ratio
         for (Camera.Size size : params.getSupportedPreviewSizes()) {
             if (size.width <= width && size.height <= height) {
                 if (result == null) {
                     result = size;
                 } else {
-                    int resultArea = result.width * result.height;
-                    int newArea = size.width * size.height;
+                    float resultAspect = (float) result.width / (float) result.height;
+                    float newAspect = (float) size.width / (float) size.height;
 
-                    if (newArea > resultArea) {
+                    float aspectErrorDifference = Math.abs(resultAspect - pictureAspect) - Math.abs(newAspect - pictureAspect);
+
+                    if (Math.abs(aspectErrorDifference) < 0.01) {
+                        // If there's not much difference then choose the best based on area
+                        int resultArea = result.width * result.height;
+                        int newArea = size.width * size.height;
+
+                        if (newArea > resultArea) {
+                            result = size;
+                        }
+                    } else if (aspectErrorDifference > 0) {
                         result = size;
                     }
                 }
