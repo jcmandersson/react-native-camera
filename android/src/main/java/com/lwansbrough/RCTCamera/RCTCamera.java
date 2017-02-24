@@ -73,27 +73,61 @@ public class RCTCamera {
         return cameraInfo.previewHeight;
     }
 
-    public Camera.Size getBestSize(List<Camera.Size> supportedSizes, int maxWidth, int maxHeight) {
-        Camera.Size bestSize = null;
-        for (Camera.Size size : supportedSizes) {
-            if (size.width > maxWidth || size.height > maxHeight) {
-                continue;
-            }
+    public Camera.Size getBestPreviewSize(List<Camera.Size> supportedPreviewSizes, List<Camera.Size> supportedPictureSizes, int width, int height)
+    {
+        Camera.Size result = null;
 
-            if (bestSize == null) {
-                bestSize = size;
-                continue;
-            }
+        Camera.Size pictureSize = getBestPictureSize(supportedPictureSizes, width, height);
+        float pictureAspect = (float) pictureSize.width / (float) pictureSize.height;
 
-            int resultArea = bestSize.width * bestSize.height;
-            int newArea = size.width * size.height;
+        // We want to find a preview size that is both as big as possible while still having the same (or very similar) aspect ratio
+        for (Camera.Size size : supportedPreviewSizes) {
+            if (size.width <= width && size.height <= height) {
+                if (result == null) {
+                    result = size;
+                } else {
+                    float resultAspect = (float) result.width / (float) result.height;
+                    float newAspect = (float) size.width / (float) size.height;
 
-            if (newArea > resultArea) {
-                bestSize = size;
+                    float aspectErrorDifference = Math.abs(resultAspect - pictureAspect) - Math.abs(newAspect - pictureAspect);
+
+                    if (Math.abs(aspectErrorDifference) < 0.01) {
+                        // If there's not much difference then choose the best based on area
+                        int resultArea = result.width * result.height;
+                        int newArea = size.width * size.height;
+
+                        if (newArea > resultArea) {
+                            result = size;
+                        }
+                    } else if (aspectErrorDifference > 0) {
+                        result = size;
+                    }
+                }
             }
         }
 
         return bestSize;
+    }
+
+    public Camera.Size getBestPictureSize(List<Camera.Size> supportedSizes, int width, int height)
+    {
+        Camera.Size result = null;
+
+        for (Camera.Size size : supportedSizes) {
+            if (size.width <= width && size.height <= height) {
+                if (result == null) {
+                    result = size;
+                } else {
+                    int resultArea = result.width * result.height;
+                    int newArea = size.width * size.height;
+
+                    if (newArea > resultArea) {
+                        result = size;
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     private Camera.Size getSmallestSize(List<Camera.Size> supportedSizes) {
@@ -224,20 +258,20 @@ public class RCTCamera {
                 pictureSize = supportedSizes.get(supportedSizes.size() / 2);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_HIGH:
-                pictureSize = getBestSize(parameters.getSupportedPictureSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+                pictureSize = getBestPictureSize(parameters.getSupportedPictureSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_PREVIEW:
-                Camera.Size optimalPreviewSize = getBestSize(parameters.getSupportedPreviewSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+                Camera.Size optimalPreviewSize = getBestPictureSize(parameters.getSupportedPreviewSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
                 pictureSize = getClosestSize(parameters.getSupportedPictureSizes(), optimalPreviewSize.width, optimalPreviewSize.height);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_480P:
-                pictureSize = getBestSize(supportedSizes, RESOLUTION_480P.width, RESOLUTION_480P.height);
+                pictureSize = getBestPictureSize(supportedSizes, RESOLUTION_480P.width, RESOLUTION_480P.height);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_720P:
-                pictureSize = getBestSize(supportedSizes, RESOLUTION_720P.width, RESOLUTION_720P.height);
+                pictureSize = getBestPictureSize(supportedSizes, RESOLUTION_720P.width, RESOLUTION_720P.height);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_1080P:
-                pictureSize = getBestSize(supportedSizes, RESOLUTION_1080P.width, RESOLUTION_1080P.height);
+                pictureSize = getBestPictureSize(supportedSizes, RESOLUTION_1080P.width, RESOLUTION_1080P.height);
                 break;
         }
 
@@ -266,19 +300,19 @@ public class RCTCamera {
                 cm = CamcorderProfile.get(_cameraTypeToIndex.get(cameraType), CamcorderProfile.QUALITY_720P);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_HIGH:
-                videoSize = getBestSize(supportedSizes, Integer.MAX_VALUE, Integer.MAX_VALUE);
+                videoSize = getBestPictureSize(supportedSizes, Integer.MAX_VALUE, Integer.MAX_VALUE);
                 cm = CamcorderProfile.get(_cameraTypeToIndex.get(cameraType), CamcorderProfile.QUALITY_HIGH);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_480P:
-                videoSize = getBestSize(supportedSizes, RESOLUTION_480P.width, RESOLUTION_480P.height);
+                videoSize = getBestPictureSize(supportedSizes, RESOLUTION_480P.width, RESOLUTION_480P.height);
                 cm = CamcorderProfile.get(_cameraTypeToIndex.get(cameraType), CamcorderProfile.QUALITY_480P);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_720P:
-                videoSize = getBestSize(supportedSizes, RESOLUTION_720P.width, RESOLUTION_720P.height);
+                videoSize = getBestPictureSize(supportedSizes, RESOLUTION_720P.width, RESOLUTION_720P.height);
                 cm = CamcorderProfile.get(_cameraTypeToIndex.get(cameraType), CamcorderProfile.QUALITY_720P);
                 break;
             case RCTCameraModule.RCT_CAMERA_CAPTURE_QUALITY_1080P:
-                videoSize = getBestSize(supportedSizes, RESOLUTION_1080P.width, RESOLUTION_1080P.height);
+                videoSize = getBestPictureSize(supportedSizes, RESOLUTION_1080P.width, RESOLUTION_1080P.height);
                 cm = CamcorderProfile.get(_cameraTypeToIndex.get(cameraType), CamcorderProfile.QUALITY_1080P);
                 break;
         }
@@ -398,7 +432,7 @@ public class RCTCamera {
 
         // set preview size
         // defaults to highest resolution available
-        Camera.Size optimalPreviewSize = getBestSize(parameters.getSupportedPreviewSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+        Camera.Size optimalPreviewSize = getBestPreviewSize(parameters.getSupportedPreviewSizes(), parameters.getSupportedPictureSizes(), Integer.MAX_VALUE, Integer.MAX_VALUE);
         int width = optimalPreviewSize.width;
         int height = optimalPreviewSize.height;
 

@@ -141,7 +141,7 @@ class RCTCameraViewFinder extends TextureView implements TextureView.SurfaceText
                 } else {
                     throw new RuntimeException("Unsupported capture mode:" + _captureMode);
                 }
-                Camera.Size optimalPictureSize = RCTCamera.getInstance().getBestSize(
+                Camera.Size optimalPictureSize = RCTCamera.getInstance().getBestPictureSize(
                         supportedSizes,
                         Integer.MAX_VALUE,
                         Integer.MAX_VALUE
