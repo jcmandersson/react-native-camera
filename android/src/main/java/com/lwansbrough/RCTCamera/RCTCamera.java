@@ -106,7 +106,7 @@ public class RCTCamera {
             }
         }
 
-        return bestSize;
+        return result;
     }
 
     public Camera.Size getBestPictureSize(List<Camera.Size> supportedSizes, int width, int height)
